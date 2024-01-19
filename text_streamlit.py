@@ -15,4 +15,12 @@ nl = st.sidebar.slider('Lignes',
 n2 = st.sidebar.radio('choisis le type de mail',['spam','ham'])
 
 # partie centrale
-st.table(data.iloc[0:nl])
+st.table(data[data['type']==n2].iloc[0:nl])
+
+# Bar graph
+st.bar_chart(data=data.iloc[0:nl], y='len')
+
+# Scatter plot
+st.scatter_chart(data=data.iloc[:nl], x='len', y='nombre_mots')
+
+
