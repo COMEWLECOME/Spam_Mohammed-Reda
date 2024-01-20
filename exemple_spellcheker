@@ -1,0 +1,11 @@
+from spellchecker import SpellChecker
+
+# Create an instance of the spell checker
+spell = SpellChecker()
+
+# Check the spelling of a word
+word = "helo"
+corrected_word = spell.correction(word)
+
+# Print the corrected word
+print(f"The corrected word for '{word}' is '{corrected_word}'.")
