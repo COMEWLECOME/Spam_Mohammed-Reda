@@ -27,4 +27,3 @@ st.bar_chart(data=df, y='len')
 # Scatter plot
 st.scatter_chart(data=data.iloc[:nl], x='len', y='nombre_mots')
 
-
