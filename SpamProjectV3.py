@@ -132,8 +132,8 @@ def testModel(sms,model):
     input_sms     = sms
     df_sms        = pd.DataFrame(input_sms)
     df_sms.rename(columns={0:'mail'}, inplace=True)
-    df_sms = prep(df_sms)
-    df_sms = features(df_sms)
+    df_sms        = prep(df_sms)
+    df_sms        = features(df_sms)
 
 
     result = model.predict(df_sms)
