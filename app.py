@@ -1,15 +1,15 @@
 import streamlit as st
-import pandas as pd 
+import SpamProjectV3 as spam
 
-url = "SMSSpamCollection.txt"
-df = pd.read_csv(url, sep='\t', header=None )
 
-df.rename(columns={0:'type',1:'mail'}, inplace=True)
+st.title('Spam Classifier')
+input =  [st.text_input('Enter a message')]
+submit = st.button('Predict')
 
-# st.sidebar → colonne de gauche
-st.sidebar.title('Configuration')
-nl = st.sidebar.slider('Lignes',
-min_value=0,
-max_value=min(50,df.shape[0]))
-# partie centrale
-st.table(df.iloc[0:nl])
+if submit:
+    for i in spam.list_model:
+        model_lm=spam.ModelCreateur(spam.X_train, spam.y_train, i)
+        st.write(i,':',spam.testModel(input,model_lm))
+    """print('model utilisé:', i)
+    y_pred = model_lm.predict(X_test)
+    spam.AfficherScores(y_test, y_pred)"""

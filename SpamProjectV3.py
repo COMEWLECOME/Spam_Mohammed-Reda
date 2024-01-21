@@ -142,7 +142,6 @@ def testModel(sms,model):
 dfModel = cree_df("SMSSpamCollection.txt")
 dfModel = prep(dfModel)
 dfModel = features(dfModel)
-print(dfModel["without_stopwords"])
 X_train, X_test, y_train, y_test = spliteur(dfModel)
 
 classifier1 = LogisticRegression(solver='liblinear', C=1e3)
