@@ -34,7 +34,7 @@ from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.metrics import accuracy_score
 from sklearn.ensemble import StackingClassifier
 from sklearn.metrics import RocCurveDisplay
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report
 
 def cree_df(url = "SMSSpamCollection.txt"):
     df = pd.read_csv(url, sep='\t', header=None )
@@ -46,7 +46,7 @@ def spliteur(df):
     y = df['type']
     return train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
 
-def PipeCreateur(X_train, y_train, classifier):
+def ModelCreateur(X_train, y_train, classifier):
     
     column_text = X_train.select_dtypes(include=['object']).columns
     
@@ -84,8 +84,9 @@ def AfficherScores(y_test, y_pred):
 X_train, X_test, y_train, y_test = spliteur(cree_df("SMSSpamCollection.txt"))
 
 classifier =LogisticRegression(solver='liblinear', C=1e3)
+# classifier =KNeighborsClassifier(7)
 
-model_lm=PipeCreateur(X_train, y_train, classifier)
+model_lm=ModelCreateur(X_train, y_train, classifier)
 
 y_pred = model_lm.predict(X_test)
 AfficherScores(y_test, y_pred)
