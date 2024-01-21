@@ -88,6 +88,4 @@ classifier =LogisticRegression(solver='liblinear', C=1e3)
 model_lm=PipeCreateur(X_train, y_train, classifier)
 
 y_pred = model_lm.predict(X_test)
-
-
 AfficherScores(y_test, y_pred)
