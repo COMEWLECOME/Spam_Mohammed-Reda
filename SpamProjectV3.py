@@ -18,6 +18,7 @@ nltk.download('punkt')
 from nltk.corpus import stopwords
 nltk.download('stopwords')
 from nltk.stem import PorterStemmer
+from sklearn.preprocessing import OrdinalEncoder
 
 # Pipeline and model
 from sklearn.pipeline import Pipeline
@@ -35,12 +36,13 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import RidgeClassifier
 from sklearn.naive_bayes import BernoulliNB
 # Score of models
-
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import RocCurveDisplay
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
 
 
-dfblacklist = pd.read_csv('blacklist.txt', header=None )
+dfblacklist = pd.read_csv('spam_words.txt', header=None, on_bad_lines='skip' )
 dfblacklist.rename(columns={0:'words'}, inplace=True)
 dfblacklistList = dfblacklist['words'].tolist()
 
@@ -64,54 +66,62 @@ def features(df):
     df['len']=df['mail'].str.len()
 # df['nombre_mots']=df['mail'].str.split().str.len()
     df['nombre_mots']=df['token'].str.len()
-    pattern = r"http\S+"
-    df['http_compt']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
+    pattern = r"http\S+|www.\S+"
+    df['http']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
 
     pattern = r"/^[\(]?[\+]?(\d{2}|\d{3})[\)]?[\s]?((\d{6}|\d{8})|(\d{3}[\*\.\-\s]){3}|(\d{2}[\*\.\-\s]){4}|(\d{4}[\*\.\-\s]){2})|\d{8}|\d{10}|\d{12}$/"
 
-    df['phone_compt']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
+    df['phone']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
 
     #pattern = r"[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?"
     #df['mail_compt']=df['mail'].apply(lambda x: re.search(pattern, x))
 
-    df['blacklist']=df['token'].apply(lambda x: [ word for word in x if word  in dfblacklistList])
+    df['blacklist']=df['token'].apply(lambda x: len([ word for word in x if word  in dfblacklistList]))
     return df
 
 
 def spliteur(df):
-    X = df.drop(columns = ['type','nombre_mots'], axis=1)
+    X = df.drop(columns = ['type'], axis=1)
     y = df['type']
     return train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
 
 def ModelCreateur(X_train, y_train, classifier):
+
+    column_num  = ['len','nombre_mots','blacklist']
+    column_bool = ['http','phone']
     
-    column_text = X_train.select_dtypes(include=['object']).columns
-    column_num = X_train.select_dtypes(exclude=['object']).columns
-    
-    # Transformation of textual variables
+    #Transformation des variables texte
     transfo_text_TFid = Pipeline(steps=[
         ('Tfid', TfidfVectorizer(lowercase=False, decode_error='ignore', analyzer='char_wb', ngram_range=(2, 2)))
         
     ])
 
-# Class ColumnTransformer : apply alls steps on the whole dataset
-    preparation = ColumnTransformer(
+    #Application des étapes sur tout le dataset
+    if classifier == "ComplementNB()" or "MultinomialNB()":
+        preparation = ColumnTransformer(
         transformers=[
-        ('TFid&data', transfo_text_TFid , 'mail'), #TFIDF ne prend pas de listes comme arguments
+        ('TFid&data', transfo_text_TFid , 'clean'), #TFIDF ne prend pas de listes comme arguments
         # ('CountVect&data', transfo_text_CountVect , 'clean'),
-        
-        ('MinMaxScaler&data',MinMaxScaler(), column_num) #['http_compt', 'mail_compt']
-        # ('data',StandardScaler(), column_num) #Les classifieurs NB ne prend pas de valeur négatif
-        # ('data',RobustScaler(), column_num) #Les classifieurs NB ne prend pas de valeur négatif
+            ('Scaler&data',MinMaxScaler(), column_num),
+            ('BoolEncoder',OrdinalEncoder(), column_bool)
+        ])
+    else : 
+        preparation = ColumnTransformer(
+        transformers=[
+        ('TFid&data', transfo_text_TFid , 'clean'), #TFIDF ne prend pas de listes comme arguments
+        # ('CountVect&data', transfo_text_CountVect , 'clean'),
+            ('Scaler&data',RobustScaler(), column_num),
+            ('BoolEncoder',OrdinalEncoder(), column_bool)
         ])
     
-    model_lm = Pipeline([
+    #relie l'algorithme avec le modèle
+    model = Pipeline([
     ('vectorizer', preparation),
     ('classifier', classifier)
     ])
-    # Fit the model
-    model_lm.fit(X_train, y_train)
-    return model_lm
+    #Fit le modèle
+    model.fit(X_train, y_train)
+    return model
 
 def AfficherScores(y_test, y_pred):
     
@@ -122,6 +132,11 @@ def AfficherScores(y_test, y_pred):
     
     # plt.hist(model_lm.decision_function(X_test), bins=50)
     plt.show()
+
+# fonction qui affiche la matrice de confusion du modèle
+def matrixconf(y_test,y_pred):
+    #affiche la matrice de confusion du modèle
+    ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
 
 def testModel(sms,model):
     input_sms     = sms
@@ -155,16 +170,19 @@ classifier10 = DecisionTreeClassifier()                              #0.97009569
 
 list_model = [classifier1,classifier2,classifier3,classifier4,classifier5,classifier6,classifier7,classifier8,classifier9,classifier10]
 
-print(dfModel[['mail','phone_compt']])
 
 
-"""input =  ['Hi Nick. This is to remind you about the $75 minimum payment on your credit card ending in XXXX. Payment is due on 01/01. Pls visit order.com to make your payment']
+
+input =  ['Hi Nick. This is to remind you about the $75 minimum payment on your credit card ending in XXXX. Payment is due on 01/01. Pls visit order.com to make your payment']
 for i in list_model:
     model_lm=ModelCreateur(X_train, y_train, i)
-    print(i,':',testModel(input))
+    # print(i,':',testModel(model_lm))
     print('model utilisé:', i)
     y_pred = model_lm.predict(X_test)
-    AfficherScores(y_test, y_pred)"""
+    AfficherScores(y_test, y_pred)
+    matrixconf(y_test,y_pred)
+
+    model_disp = RocCurveDisplay.from_estimator(model_lm,X_test,y_test)
 
 
 
