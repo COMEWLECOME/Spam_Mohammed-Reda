@@ -65,13 +65,14 @@ def features(df):
 # df['nombre_mots']=df['mail'].str.split().str.len()
     df['nombre_mots']=df['token'].str.len()
     pattern = r"http\S+"
-    df['http_compt']=df['mail'].apply(lambda x: len(re.findall(pattern, x)))
+    df['http_compt']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
 
-    pattern = r"([+-]?(?=\.\d|\d)(?:\d+)?(?:\.?\d*))(?:[Ee]([+-]?\d+))?"
-    df['phone_compt']=df['mail'].apply(lambda x: len(re.findall(pattern, x)))
+    pattern = r"/^[\(]?[\+]?(\d{2}|\d{3})[\)]?[\s]?((\d{6}|\d{8})|(\d{3}[\*\.\-\s]){3}|(\d{2}[\*\.\-\s]){4}|(\d{4}[\*\.\-\s]){2})|\d{8}|\d{10}|\d{12}$/"
 
-    pattern = r"[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?"
-    df['mail_compt']=df['mail'].apply(lambda x: len(re.findall(pattern, x)))
+    df['phone_compt']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
+
+    #pattern = r"[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?"
+    #df['mail_compt']=df['mail'].apply(lambda x: re.search(pattern, x))
 
     df['blacklist']=df['token'].apply(lambda x: [ word for word in x if word  in dfblacklistList])
     return df
@@ -92,12 +93,6 @@ def ModelCreateur(X_train, y_train, classifier):
         ('Tfid', TfidfVectorizer(lowercase=False, decode_error='ignore', analyzer='char_wb', ngram_range=(2, 2)))
         
     ])
-
-
-    transfo_text_CountVect = Pipeline(steps=[  
-    ('boCountVectorizerw', CountVectorizer(decode_error='ignore', analyzer='char_wb',strip_accents='unicode', ngram_range=(2, 2)))
-    ])
-
 
 # Class ColumnTransformer : apply alls steps on the whole dataset
     preparation = ColumnTransformer(
@@ -159,6 +154,8 @@ classifier9 = RandomForestClassifier(max_depth=200, random_state=42) #0.98385167
 classifier10 = DecisionTreeClassifier()                              #0.9700956937799043
 
 list_model = [classifier1,classifier2,classifier3,classifier4,classifier5,classifier6,classifier7,classifier8,classifier9,classifier10]
+
+print(dfModel[['mail','phone_compt']])
 
 
 """input =  ['Hi Nick. This is to remind you about the $75 minimum payment on your credit card ending in XXXX. Payment is due on 01/01. Pls visit order.com to make your payment']
