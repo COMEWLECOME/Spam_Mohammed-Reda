@@ -3,7 +3,7 @@ import SpamProjectV3 as spam
 
 
 st.title('Spam Classifier')
-input =  [st.text_input('Enter a message')]
+input =  st.text_input('Enter a message')
 submit = st.button('Predict')
 
 if submit:
