@@ -19,7 +19,7 @@ from nltk.corpus import stopwords
 nltk.download('stopwords')
 from nltk.stem import PorterStemmer
 from sklearn.preprocessing import OrdinalEncoder
-
+from imblearn.under_sampling import RandomUnderSampler 
 # Pipeline and model
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
@@ -80,10 +80,18 @@ def features(df):
     return df
 
 
-def spliteur(df):
+def spliteur_simple(df):
     X = df.drop(columns = ['type'], axis=1)
     y = df['type']
     return train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
+
+def spliteur(df):
+    X = df.drop(columns = ['type'], axis=1)
+    y = df['type']
+    rus = RandomUnderSampler(random_state=42)
+    X_res, y_res = rus.fit_resample(X, y)
+    #return train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
+    return train_test_split(X_res, y_res, stratify=y_res, test_size=0.2, random_state=42)
 
 def ModelCreateur(X_train, y_train, classifier):
 
@@ -144,10 +152,11 @@ def testModel(sms,model):
     df_sms.rename(columns={0:'mail'}, inplace=True)
     df_sms        = prep(df_sms)
     df_sms        = features(df_sms)
-
-
     result = model.predict(df_sms)
     return result
+
+
+
 
 dfModel = cree_df("SMSSpamCollection.txt")
 dfModel = prep(dfModel)
@@ -176,13 +185,12 @@ list_model = [classifier1,classifier2,classifier3,classifier4,classifier5,classi
 input =  ['Hi Nick. This is to remind you about the $75 minimum payment on your credit card ending in XXXX. Payment is due on 01/01. Pls visit order.com to make your payment']
 for i in list_model:
     model_lm=ModelCreateur(X_train, y_train, i)
-    # print(i,':',testModel(model_lm))
-    print('model utilisé:', i)
+    print(i,':',testModel(input,model_lm))
+    
     y_pred = model_lm.predict(X_test)
     AfficherScores(y_test, y_pred)
-    matrixconf(y_test,y_pred)
-
-    model_disp = RocCurveDisplay.from_estimator(model_lm,X_test,y_test)
+    # matrixconf(y_test,y_pred)
+    # model_disp = RocCurveDisplay.from_estimator(model_lm,X_test,y_test)
 
 
 
