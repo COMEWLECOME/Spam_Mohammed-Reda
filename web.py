@@ -199,6 +199,7 @@ if submit:
 
 
 
+
 # if submit:
 #     for i in list_model:
 #         model_lm = ModelCreateur(X_train, y_train, i)
