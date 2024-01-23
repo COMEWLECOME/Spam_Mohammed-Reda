@@ -186,7 +186,6 @@ input =  ['Hi Nick. This is to remind you about the $75 minimum payment on your 
 for i in list_model:
     model_lm=ModelCreateur(X_train, y_train, i)
     print(i,':',testModel(input,model_lm))
-    
     y_pred = model_lm.predict(X_test)
     AfficherScores(y_test, y_pred)
     # matrixconf(y_test,y_pred)
