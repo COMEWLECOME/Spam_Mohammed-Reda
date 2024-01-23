@@ -125,7 +125,7 @@ def ModelCreateur(X_train, y_train, classifier):
     #relie l'algorithme avec le modèle
     model = Pipeline([
     ('vectorizer', preparation),
-    ('classifier', classifier)
+    ('model', classifier)
     ])
     #Fit le modèle
     model.fit(X_train, y_train)

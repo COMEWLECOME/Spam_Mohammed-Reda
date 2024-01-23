@@ -127,7 +127,7 @@ def ModelCreateur(X_train, y_train, classifier):
     #relie l'algorithme avec le modèle
     model = Pipeline([
     ('vectorizer', preparation),
-    ('classifier', classifier)
+    ('model', classifier)
     ])
     #Fit le modèle
     model.fit(X_train, y_train)
@@ -176,26 +176,36 @@ def modellist():
 
 
 
+# """"""""""""""""Main""""""""""""""""""
 
+list_model = modellist()
 dfModel = cree_df("SMSSpamCollection.txt")
 dfModel = prep(dfModel)
-dfModel = features(dfModel)
+dfModel = features(dfModel)    
 X_train, X_test, y_train, y_test = spliteur(dfModel)
-list_model = modellist()
-
 
 st.title('Spam Classifier')
 input =  st.text_input('Enter a message')
+option = st.selectbox('Sélectionnez un modele', list_model)
 submit = st.button('Predict')
-
-
 if submit:
-    for i in list_model:
-        model_lm = ModelCreateur(X_train, y_train, i)
-        y_pred = testModel(str(input),model_lm)
-        if y_pred == 'spam':
-            st.write(i,"it's a spam")
-        else:
-            st.write(i,"it's not a spam")
+
+    model_lm = ModelCreateur(X_train, y_train, option)
+    y_pred = testModel(input,model_lm)
+    if y_pred == 'spam':
+        st.write("it's a spam")
+    else:
+        st.write("it's not a spam")
+
+
+
+# if submit:
+#     for i in list_model:
+#         model_lm = ModelCreateur(X_train, y_train, i)
+#         y_pred = testModel(str(input),model_lm)
+#         if y_pred == 'spam':
+#             st.write(i,"it's a spam")
+#         else:
+#             st.write(i,"it's not a spam")
 
 
