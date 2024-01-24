@@ -117,9 +117,9 @@ def spliteur(df):
     return train_test_split(X_res, y_res, stratify=y_res, test_size=0.2, random_state=42)
 
 def SMOTE_simple(df):
-    X = df.drop(columns = ['type'], axis=1)
+    X = df[['clean','len','nombre_mots','blacklist','http','phone','mail_compt']]
     y = df['type']
-    rus = SMOTENC(random_state=42, categorical_features=[18, 19])
+    rus = SMOTENC(random_state=42, categorical_features=[0])
     X_res, y_res = rus.fit_resample(X, y)
     #return train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
     return train_test_split(X_res, y_res, stratify=y_res, test_size=0.2, random_state=42)
@@ -181,7 +181,7 @@ def AfficherScores(model,y_test, y_pred):
     
     #affiche la classification rapport du modèle
     st.write(classification_report(y_test, y_pred))
-    st.write(f"{classifier_name} ---> Accuracy score:", accuracy_score(y_test, y_pred))
+    st.dataframe(classification_report(y_test, y_pred, output_dict=True))
     st.write(f"{classifier_name} ---> Best parameters: {model.best_params_}")
     st.write(f"{classifier_name} ---> Best score: {model.best_score_}")
     
@@ -224,30 +224,30 @@ def gridCreateur(pipe, parametre):
 def modeleslist():
     models = {
         'LogisticRegression': {
-            'model': LogisticRegression(),'param': {'model__solver':['liblinear', 'saga'],
-                                                    'model__penalty': ['l1', 'l2'],
-                                                    'model__C':[0.1, 1, 10]}
+            'model': LogisticRegression(),'param': {'model__solver':['liblinear'],
+                                                    'model__penalty': ['l1'],
+                                                    'model__C':[10]}
         },
         'ComplementNB': {
-            'model': ComplementNB(),'param': {'model__alpha': (0.1, 0.5, 1.0)}
+            'model': ComplementNB(),'param': {'model__alpha': (0.1)}
         },
         'BernoulliNB': {
-            'model': BernoulliNB(),'param': {'model__alpha': [0.0, 1.0, 10.0],
-                                              'model__binarize': [None, 0.0, 0.5, 1.0]}
+            'model': BernoulliNB(),'param': {'model__alpha': [0.0],
+                                              'model__binarize': [None]}
         },        
         'SVC': {
-            'model': SVC(),'param': {'model__kernel':('linear', 'rbf'),
-                                     'model__C':[1, 10]}
+            'model': SVC(),'param': {'model__kernel':('rbf'),
+                                     'model__C':[10]}
         },
         'RandomForestClassifier': {
-            'model': RandomForestClassifier(),'param': {'model__n_estimators': [200, 300],
-                                                        'model__max_depth': [10, 30]}
+            'model': RandomForestClassifier(),'param': {'model__n_estimators': [200],
+                                                        'model__max_depth': [30]}
         
         },
         'DecisionTreeClassifier': {
-            'model': DecisionTreeClassifier(),'param': {'model__criterion': ['gini', 'entropy'],
-                                                        'model__splitter': ['best', 'random'],
-                                                        'model__max_depth': [10, 30]
+            'model': DecisionTreeClassifier(),'param': {'model__criterion': ['gini'],
+                                                        'model__splitter': ['best'],
+                                                        'model__max_depth': [30]
                                                         }
         
         },
