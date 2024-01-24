@@ -1,4 +1,3 @@
-
 # data
 import pandas as pd
 import numpy as np
@@ -6,26 +5,22 @@ import matplotlib.pyplot as plt
 import re
 import nltk
 import streamlit as st
-# import os 
-# os.system('pip install scikit-learn')
-
 # Preprocessing
+from imblearn.under_sampling import RandomUnderSampler #conda install conda-forge::imbalanced-learn
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler, RobustScaler, MinMaxScaler
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.decomposition import TruncatedSVD
-from nltk.tokenize import RegexpTokenizer
-nltk.download('punkt')
-from nltk.corpus import stopwords
-nltk.download('stopwords')
-stopwords.ensure_loaded()
-from nltk.stem import PorterStemmer
 from sklearn.preprocessing import OrdinalEncoder
-from imblearn.under_sampling import RandomUnderSampler 
+from sklearn.preprocessing import RobustScaler, MinMaxScaler
+from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.tokenize import RegexpTokenizer
+# nltk.download('punkt')
+from nltk.corpus import stopwords
+# nltk.download('stopwords')
+from nltk.stem import PorterStemmer
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.over_sampling import SMOTENC
+
 # Pipeline and model
-from sklearn import svm
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
@@ -38,14 +33,18 @@ from sklearn.naive_bayes import ComplementNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import RidgeClassifier
 from sklearn.naive_bayes import BernoulliNB
-# Score of models
-from sklearn.metrics import ConfusionMatrixDisplay
-from sklearn.metrics import RocCurveDisplay
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import classification_report
+from sklearn import svm
 from sklearn.model_selection import GridSearchCV
+
+
+# Score of models
 from sklearn.metrics import make_scorer
 from sklearn.metrics import roc_auc_score, f1_score, recall_score, balanced_accuracy_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import RocCurveDisplay
+
 
 dfblacklist = pd.read_csv('spam_words.txt', header=None, on_bad_lines='skip' )
 dfblacklist.rename(columns={0:'words'}, inplace=True)
@@ -56,31 +55,50 @@ def cree_df(url = "SMSSpamCollection.txt"):
     df.rename(columns={0:'type',1:'mail'}, inplace=True)
     return df
 
+#fonction de préparation des données (preprocessing)
 def prep(df): 
+
+    #lowercase des message
     df['minuscule']=df['mail'].str.lower()
+
+    #mise en place des tokens des message
     tokenizer = RegexpTokenizer(r"\b\w+\b|\d{2} \d{2} \d{2} \d{2} \d{2}")
     df['token'] = df['minuscule'].apply(lambda x: tokenizer.tokenize(x))
+
+    #ajout d'un stopwords 
     stop = stopwords.words('english')
     df['without_stopwords']=df['token'].apply(lambda x: [word for word in x if word not in stop])
+
+    #ajout d'un stemmer
     stemmer = PorterStemmer()
     df['PorterStemmer'] = df['without_stopwords'].apply(lambda x: [stemmer.stem(word) for word in x])
+    
+    #regroupement du traitement des données
     df['clean'] = df['without_stopwords'].apply(lambda x: " ".join(x))
     return df
 
 def features(df):
+    
+    #ajout d'une feature "longueur du message"
     df['len']=df['mail'].str.len()
+
+    #ajout d'une feature "nombre de mots"
 # df['nombre_mots']=df['mail'].str.split().str.len()
     df['nombre_mots']=df['token'].str.len()
+
+    #ajout d'une feature permettant de vérifier si présence d'hypertexte
     pattern = r"http\S+|www.\S+"
     df['http']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
 
+    #ajout d'une feature permettant de vérifier la présence de chiffre 
     pattern = r"/^[\(]?[\+]?(\d{2}|\d{3})[\)]?[\s]?((\d{6}|\d{8})|(\d{3}[\*\.\-\s]){3}|(\d{2}[\*\.\-\s]){4}|(\d{4}[\*\.\-\s]){2})|\d{8}|\d{10}|\d{12}$/"
-
     df['phone']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
+    
+    #ajout d'une feature permettant de vérifier la présence de mail
+    pattern = r"[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+(?:\.[-A-Za-z0-9!#$%&'*+/=?^_`{|}~]+)*@(?:[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?\.)+[A-Za-z0-9](?:[-A-Za-z0-9]*[A-Za-z0-9])?"
+    df['mail_compt']=df['mail'].apply(lambda x : True if re.search(pattern, x) else False)
 
-    #pattern = r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"
-    #df['mail_compt']=df['mail'].apply(lambda x: re.search(pattern, x))
-
+    #ajout d'une feature permettant de vérifier la présence de mots blacklisté 
     df['blacklist']=df['token'].apply(lambda x: len([ word for word in x if word  in dfblacklistList]))
     return df
 
@@ -98,31 +116,39 @@ def spliteur(df):
     #return train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
     return train_test_split(X_res, y_res, stratify=y_res, test_size=0.2, random_state=42)
 
+def SMOTE_simple(df):
+    X = df.drop(columns = ['type'], axis=1)
+    y = df['type']
+    rus = SMOTENC(random_state=42)
+    X_res, y_res = rus.fit_resample(X, y)
+    #return train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
+    return train_test_split(X_res, y_res, stratify=y_res, test_size=0.2, random_state=42)
+
 def ModelCreateur(X_train, y_train, classifier):
 
     column_num  = ['len','nombre_mots','blacklist']
-    column_bool = ['http','phone']
-    
+    column_bool = ['http','phone','mail_compt']
+    column_text = 'clean'
     #Transformation des variables texte
     transfo_text_TFid = Pipeline(steps=[
         ('Tfid', TfidfVectorizer(lowercase=False, decode_error='ignore', analyzer='char_wb', ngram_range=(2, 2)))
         
     ])
 
-    #Application des étapes sur tout le dataset
-    if isinstance(classifier, ComplementNB) or isinstance(classifier, MultinomialNB):
+#Application des étapes sur tout le dataset
+    if isinstance(classifier, ComplementNB) or isinstance(classifier, MultinomialNB) or isinstance(classifier, BernoulliNB):
         preparation = ColumnTransformer(
         transformers=[
-        ('TFid&data', transfo_text_TFid , 'clean'), #TFIDF ne prend pas de listes comme arguments
-        # ('CountVect&data', transfo_text_CountVect , 'clean'),
+        ('TFid&data', transfo_text_TFid , column_text), #TFIDF ne prend pas de listes comme arguments
+        # ('CountVect&data', transfo_text_CountVect , column_text),
             ('Scaler&data',MinMaxScaler(), column_num),
             ('BoolEncoder',OrdinalEncoder(), column_bool)
         ])
     else : 
         preparation = ColumnTransformer(
         transformers=[
-        ('TFid&data', transfo_text_TFid , 'clean'), #TFIDF ne prend pas de listes comme arguments
-        # ('CountVect&data', transfo_text_CountVect , 'clean'),
+        ('TFid&data', transfo_text_TFid , column_text), #TFIDF ne prend pas de listes comme arguments
+        # ('CountVect&data', transfo_text_CountVect , column_text),
             ('Scaler&data',RobustScaler(), column_num),
             ('BoolEncoder',OrdinalEncoder(), column_bool)
         ])
@@ -130,21 +156,45 @@ def ModelCreateur(X_train, y_train, classifier):
     #relie l'algorithme avec le modèle
     model = Pipeline([
     ('vectorizer', preparation),
+    
     ('model', classifier)
     ])
     #Fit le modèle
     model.fit(X_train, y_train)
     return model
 
-def AfficherScores(y_test, y_pred):
+# def AfficherScores(y_test, y_pred):
     
-    st.write("Accuracy:", accuracy_score(y_test, y_pred))
-    st.dataframe(classification_report(y_test, y_pred, output_dict=True))
+#     st.write("Accuracy:", accuracy_score(y_test, y_pred))
+#     st.dataframe(classification_report(y_test, y_pred, output_dict=True))
     
-    #ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
+#     ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
     
-    # plt.hist(model_lm.decision_function(X_test), bins=50)
+#     plt.hist(model_lm.decision_function(X_test), bins=50)
+#     plt.show()
+
+#fonction permettant de connaître le score de notre modèle
+def AfficherScores(model,y_test, y_pred):
+    
+    classifier_name = model.best_estimator_.named_steps['model'].__class__.__name__
+    st.write(f"--------------------------------{classifier_name}-------------------------------------------------")
+    
+    #affiche la classification rapport du modèle
+    st.write(classification_report(y_test, y_pred))
+    st.write(f"{classifier_name} ---> Accuracy score:", accuracy_score(y_test, y_pred))
+    st.write(f"{classifier_name} ---> Best parameters: {model.best_params_}")
+    st.write(f"{classifier_name} ---> Best score: {model.best_score_}")
+    
+    
+    disp = matrixconf(y_test,y_pred)
+    plt.title(f"Matrice de confusion de {classifier_name} ")
     plt.show()
+    
+    disp = RocCurveDisplay.from_estimator(model,X_test,y_test)
+    plt.title(f"Courbe ROC de {classifier_name} ")
+    plt.show()
+
+
 
 # fonction qui affiche la matrice de confusion du modèle
 def matrixconf(y_test,y_pred):
@@ -159,48 +209,12 @@ def testModel(sms,model):
     result = model.predict(df_sms)
     return result
 
-
-# def modellist():
-#     classifier1 = LogisticRegression(solver='lbfgs,liblinear', C=1e3)
-#     classifier2 = KNeighborsClassifier(7)
-
-#     classifier3 = ComplementNB()                                        #0.9838516746411483
-#     classifier4 = MultinomialNB()                                       #0.9856459330143541
-#     classifier5 = BernoulliNB(force_alpha=True)
-
-#     classifier6 = svm.SVC()                                                #0.9742822966507177
-#     classifier7 = SVC(gamma=2, C=1, random_state=42)                    #0.8941387559808612
-
-#     classifier8 = RidgeClassifier(tol=1e-2, solver="sparse_cg")          #0.9811659192825112
-#     classifier9 = RandomForestClassifier(max_depth=200, random_state=42) #0.9838516746411483
-#     classifier10 = DecisionTreeClassifier()                              #0.9700956937799043
-
-#     return [classifier1,classifier2,classifier3,classifier4,classifier5,classifier6,classifier7,classifier8,classifier9,classifier10]
-
-# def model_parametre():
-#     parametre1 = {'model__solver':'liblinear', 'C':[1e3, 1e4]}
-#     parametre2 = KNeighborsClassifier(7)
-
-#     parametre3 = ComplementNB()                                       
-#     parametre4 = MultinomialNB()                                       
-#     parametre5 = BernoulliNB(force_alpha=True)
-
-#     parametre6 = {'model__kernel':('linear', 'rbf'), 'model__C':[1, 10]}
-#     parametre7 = SVC(gamma=2, C=1, random_state=42)                    
-
-#     parametre8 = RidgeClassifier(tol=1e-2, solver="sparse_cg")          
-#     parametre9 = RandomForestClassifier(max_depth=200, random_state=42)
-#     parametre10 = DecisionTreeClassifier()                              
-
-#     return [parametre1,parametre2,parametre3,parametre4,parametre5,parametre6,parametre7,parametre8,parametre9,parametre10]
-
-
-
 def gridCreateur(pipe, parametre):
-    Scoring_list= ['accuracy', 'recall', 'roc_auc']
-
+    
     # grid = GridSearchCV(pipe, parametre, scoring=Scoring_list, refit='roc_auc', cv = 5, n_jobs =-1, verbose = 1)
-    grid = GridSearchCV(pipe, parametre, scoring='accuracy', cv = 5, n_jobs =-1, verbose = 1)
+    R = make_scorer(recall_score, pos_label='spam')
+    Scoring_list= {'Myrecall':R, 'Precision':'precision', 'roc':'roc_auc'}
+    grid = GridSearchCV(pipe, parametre, scoring=Scoring_list, refit='Myrecall',cv = 5, n_jobs =-1, verbose = 1)
     # Fit the model
     grid.fit(X_train, y_train)
     return grid
@@ -210,10 +224,43 @@ def gridCreateur(pipe, parametre):
 def modeleslist():
     models = {
         'LogisticRegression': {
-            'model': LogisticRegression(),'param': {'model__solver':['liblinear'], 'model__C':[0.1, 1, 10]}
+            'model': LogisticRegression(),'param': {'model__solver':['liblinear', 'saga'],
+                                                    'model__penalty': ['l1', 'l2'],
+                                                    'model__C':[0.1, 1, 10]}
         },
+        'ComplementNB': {
+            'model': ComplementNB(),'param': {'model__alpha': (0.1, 0.5, 1.0)}
+        },
+        'BernoulliNB': {
+            'model': BernoulliNB(),'param': {'model__alpha': [0.0, 1.0, 10.0],
+                                              'model__binarize': [None, 0.0, 0.5, 1.0]}
+        },        
         'SVC': {
-            'model': SVC(),'param': {'model__kernel':('linear', 'rbf'), 'model__C':[1, 10]}
+            'model': SVC(),'param': {'model__kernel':('linear', 'rbf'),
+                                     'model__C':[1, 10]}
+        },
+        'RandomForestClassifier': {
+            'model': RandomForestClassifier(),'param': {'model__n_estimators': [200, 300],
+                                                        'model__max_depth': [10, 30]}
+        
+        },
+        'DecisionTreeClassifier': {
+            'model': DecisionTreeClassifier(),'param': {'model__criterion': ['gini', 'entropy'],
+                                                        'model__splitter': ['best', 'random'],
+                                                        'model__max_depth': [10, 30]
+                                                        }
+        
+        },
+        'KNeighborsClassifier': {
+            'model': KNeighborsClassifier(),'param': {'model__n_neighbors': [3, 7],
+                                                      'model__weights': ['uniform', 'distance'],
+                                                    'model__algorithm': ['auto', 'ball_tree']}
+        
+        },
+        'RidgeClassifier': {
+            'model': RidgeClassifier(),'param': {'model__alpha': [0.1, 1.0,10],
+                                                 'model__solver': ['auto']
+                                                 }
         }
     }
     return models
@@ -226,7 +273,7 @@ def modeleslist():
 dfModel = cree_df("SMSSpamCollection.txt")
 dfModel = prep(dfModel)
 dfModel = features(dfModel)    
-X_train, X_test, y_train, y_test = spliteur_simple(dfModel)
+X_train, X_test, y_train, y_test = SMOTE_simple(dfModel)
 
 list_model = modeleslist()
 st.image('logoweb.png', use_column_width="auto")
