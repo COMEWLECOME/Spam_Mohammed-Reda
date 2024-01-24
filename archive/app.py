@@ -1,5 +1,5 @@
 import streamlit as st
-import SpamProjectV3 as sp
+import archive.SpamProject23012024 as sp
 
 # Pipeline and model
 from sklearn.pipeline import Pipeline
