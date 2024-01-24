@@ -119,7 +119,7 @@ def spliteur(df):
 def SMOTE_simple(df):
     X = df.drop(columns = ['type'], axis=1)
     y = df['type']
-    rus = SMOTENC(random_state=42)
+    rus = SMOTENC(random_state=42, categorical_features=[18, 19])
     X_res, y_res = rus.fit_resample(X, y)
     #return train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
     return train_test_split(X_res, y_res, stratify=y_res, test_size=0.2, random_state=42)
