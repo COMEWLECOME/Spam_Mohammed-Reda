@@ -44,7 +44,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.metrics import RocCurveDisplay
-
+from sklearn.metrics import precision_score
 
 dfblacklist = pd.read_csv('spam_words.txt', header=None, on_bad_lines='skip' )
 dfblacklist.rename(columns={0:'words'}, inplace=True)
@@ -180,19 +180,17 @@ def AfficherScores(model,y_test, y_pred):
     st.write(f"--------------------------------{classifier_name}-------------------------------------------------")
     
     #affiche la classification rapport du modèle
-    st.write(classification_report(y_test, y_pred))
     st.dataframe(classification_report(y_test, y_pred, output_dict=True))
-    st.write(f"{classifier_name} ---> Best parameters: {model.best_params_}")
-    st.write(f"{classifier_name} ---> Best score: {model.best_score_}")
+    st.write(f"Best parameters: {model.best_params_}")
+    st.write(f"Best score: {model.best_score_}")
     
     
     disp = matrixconf(y_test,y_pred)
     plt.title(f"Matrice de confusion de {classifier_name} ")
-    plt.show()
-    
+    st.pyplot(plt)
     disp = RocCurveDisplay.from_estimator(model,X_test,y_test)
     plt.title(f"Courbe ROC de {classifier_name} ")
-    plt.show()
+    st.pyplot(plt)
 
 
 
@@ -213,8 +211,9 @@ def gridCreateur(pipe, parametre):
     
     # grid = GridSearchCV(pipe, parametre, scoring=Scoring_list, refit='roc_auc', cv = 5, n_jobs =-1, verbose = 1)
     R = make_scorer(recall_score, pos_label='spam')
-    Scoring_list= {'Myrecall':R, 'Precision':'precision', 'roc':'roc_auc'}
-    grid = GridSearchCV(pipe, parametre, scoring=Scoring_list, refit='Myrecall',cv = 5, n_jobs =-1, verbose = 1)
+    P = make_scorer(precision_score, pos_label='spam')
+    Scoring_list= {'Myrecall':R, 'MyPrecision':P, 'roc':'roc_auc'}
+    grid = GridSearchCV(pipe, parametre, scoring=Scoring_list, refit='Myrecall',cv = 2, n_jobs =-1, verbose = 1)
     # Fit the model
     grid.fit(X_train, y_train)
     return grid
@@ -229,14 +228,14 @@ def modeleslist():
                                                     'model__C':[10]}
         },
         'ComplementNB': {
-            'model': ComplementNB(),'param': {'model__alpha': (0.1)}
+            'model': ComplementNB(),'param': {'model__alpha': [0.1]}
         },
         'BernoulliNB': {
             'model': BernoulliNB(),'param': {'model__alpha': [0.0],
                                               'model__binarize': [None]}
         },        
         'SVC': {
-            'model': SVC(),'param': {'model__kernel':('rbf'),
+            'model': SVC(),'param': {'model__kernel':['rbf'],
                                      'model__C':[10]}
         },
         'RandomForestClassifier': {
@@ -252,13 +251,13 @@ def modeleslist():
         
         },
         'KNeighborsClassifier': {
-            'model': KNeighborsClassifier(),'param': {'model__n_neighbors': [3, 7],
-                                                      'model__weights': ['uniform', 'distance'],
-                                                    'model__algorithm': ['auto', 'ball_tree']}
+            'model': KNeighborsClassifier(),'param': {'model__n_neighbors': [3],
+                                                      'model__weights': ['distance'],
+                                                    'model__algorithm': ['auto']}
         
         },
         'RidgeClassifier': {
-            'model': RidgeClassifier(),'param': {'model__alpha': [0.1, 1.0,10],
+            'model': RidgeClassifier(),'param': {'model__alpha': [0.1],
                                                  'model__solver': ['auto']
                                                  }
         }
@@ -294,7 +293,7 @@ if submit:
     
     y_pred = model.predict(X_test)
 
-    AfficherScores(y_test, y_pred)
+    AfficherScores(model,y_test, y_pred)
 
 
 
